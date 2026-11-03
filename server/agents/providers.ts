@@ -42,6 +42,39 @@ function key(name: string) {
   if (!value) throw new Error(`${name} is not configured on the server.`);
   return value;
 }
+/** Meta uses the existing single-shot review contract; never substitutes another model. */
+export class MetaProvider implements LLMProvider {
+  async generate(agent: Agent, context: AgentContext): Promise<ProviderResult> {
+    const data = await request(
+      'https://api.meta.ai/v1/chat/completions',
+      { Authorization: `Bearer ${key('MODEL_API_KEY')}` },
+      {
+        model: agent.model,
+        messages: [
+          { role: 'system', content: instructions(agent, context) },
+          { role: 'user', content: JSON.stringify(context) },
+        ],
+        max_completion_tokens: 3000,
+        reasoning_effort: 'low',
+        store: false,
+        response_format: {
+          type: 'json_schema',
+          json_schema: { name: 'engineering_review', strict: true, schema },
+        },
+      },
+    );
+    const choice = data.choices?.[0];
+    if (choice?.finish_reason !== 'stop' || choice.message?.refusal || !choice.message?.content)
+      throw new Error(
+        'Meta output was incomplete or refused; no findings or proposals were applied.',
+      );
+    return {
+      output: agentOutputSchema.parse(JSON.parse(choice.message.content)),
+      inputTokens: data.usage?.prompt_tokens ?? 0,
+      outputTokens: data.usage?.completion_tokens ?? 0,
+    };
+  }
+}
 export class OpenAIProvider implements LLMProvider {
   async generate(agent: Agent, context: AgentContext): Promise<ProviderResult> {
     const data = await request(
@@ -279,12 +312,15 @@ export class LocalRulesProvider implements LLMProvider {
 }
 const providers: Record<string, LLMProvider> = {
   local: new LocalRulesProvider(),
+  meta: new MetaProvider(),
   openai: new OpenAIProvider(),
   anthropic: new AnthropicProvider(),
   google: new GoogleProvider(),
 };
 export function providerFor(name: string): LLMProvider {
   if (!providers[name]) throw new Error('Unsupported provider.');
-  // Local rules are instant and free, so only remote model calls go through the Redis cache.
-  return name === 'local' ? providers[name] : new CachedProvider(name, providers[name]);
+  // Meta reviews deliberately bypass the application cache so demo runs make real requests.
+  return name === 'local' || name === 'meta'
+    ? providers[name]
+    : new CachedProvider(name, providers[name]);
 }
