@@ -190,4 +190,27 @@ describe('Meta provider', () => {
       'Provider request failed (429)',
     );
   });
+  it('routes eligible Meta Muse models via OpenRouter when OPENROUTER_API_KEY is configured and rejects non-Muse models', async () => {
+    vi.stubEnv('MODEL_API_KEY', '');
+    vi.stubEnv('OPENROUTER_API_KEY', 'sk-or-v1-test');
+    const mock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          provider: 'Meta',
+          model: 'meta/muse-spark-1.3',
+          choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(output) } }],
+          usage: { prompt_tokens: 12, completion_tokens: 24 },
+        }),
+      ),
+    );
+    vi.stubGlobal('fetch', mock);
+    const result = await new MetaProvider().generate(meta, context);
+    expect(mock.mock.calls[0][0]).toBe('https://openrouter.ai/api/v1/chat/completions');
+    expect(JSON.parse(mock.mock.calls[0][1].body).model).toBe('meta/muse-spark-1.3');
+    expect(result.upstreamProvider).toBe('Meta');
+    expect(result.model).toBe('meta/muse-spark-1.3');
+    await expect(
+      new MetaProvider().generate({ ...meta, model: 'gpt-5.5' }, context),
+    ).rejects.toThrow('Meta Muse model');
+  });
 });

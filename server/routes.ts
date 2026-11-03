@@ -175,7 +175,7 @@ export function registerRoutes(app: FastifyInstance, db: DB, hub: RealtimeHub, o
         usage,
         // Which model providers have server-side credentials (never the keys themselves).
         availableProviders: {
-          meta: !!process.env.MODEL_API_KEY,
+          meta: !!(process.env.MODEL_API_KEY || process.env.OPENROUTER_API_KEY),
           openai: !!process.env.OPENAI_API_KEY,
           anthropic: !!process.env.ANTHROPIC_API_KEY,
           google: !!process.env.GOOGLE_API_KEY,

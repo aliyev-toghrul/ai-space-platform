@@ -174,10 +174,11 @@ findings, proposals, human approval, and ChatGPT + Gemini Council predate the ev
 This change adds a Meta structured-review provider, provider selection, failure
 contract tests, and an explicit uncached connectivity check. Council is unchanged.
 
-Set `MODEL_API_KEY` only in the backend environment (local `.env` or Render), then run
-`npx tsx scripts/meta-smoke.ts`. It makes a genuine request to `muse-spark-1.3` and
-prints validation/usage metadata without the key or response body. Mock tests are
-not evidence of live inference. Meta reviews bypass the application response cache.
+Set `MODEL_API_KEY` (direct Meta API) or `OPENROUTER_API_KEY` (`meta/muse-*` routing) only in the
+backend environment (local `.env` or Render), then run `npx tsx scripts/meta-smoke.ts`. It makes a
+genuine request to `muse-spark-1.3` and prints validation/usage metadata without the key or
+response body. Mock tests are not evidence of live inference. Meta reviews bypass the application
+response cache.
 
 In Agents, configure one reviewer with provider `meta`, model `muse-spark-1.3`.
 For an empty workspace, create a separate demo project, use Import existing system

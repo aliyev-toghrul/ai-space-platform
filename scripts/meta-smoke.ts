@@ -30,7 +30,8 @@ try {
     JSON.stringify({
       ok: true,
       provider: 'meta',
-      model: agent.model,
+      upstreamProvider: result.upstreamProvider ?? 'Meta',
+      model: result.model ?? agent.model,
       schemaValidated: true,
       cached: false,
       inputTokens: result.inputTokens,
